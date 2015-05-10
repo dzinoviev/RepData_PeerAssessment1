@@ -1,7 +1,15 @@
-# Reproducible Research: Peer Assessment 1
+---
+title: 'Reproducible Research: Peer Assessment 1'
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
+---
 
 
 ## Loading and preprocessing the data
+The file *activity.csv* (unzipped from *repdata-data-activity.zip*) contains the data from a personal activity monitoring device. Each record has the number of steps taken in a 5-minute interval (possibly a NA), the date, and the interval ID. Only complete records are used for the first several experiments.
+
 
 ```r
 activity <- read.csv ("activity.csv")
@@ -12,46 +20,46 @@ complete.activity <- activity[complete.cases (activity),]
 
 ## What is mean total number of steps taken per day?
 
+The plot shows a histogram of the total number of steps taken each day.
+
+
 ```r
+library (lattice)
 sum.steps <- aggregate (complete.activity$steps, by = list (complete.activity$date), FUN = sum)[2]
-hist (sum.steps$x, xlab = "Daily sum of steps", main = "Total number of steps taken each day")
+histogram (sum.steps$x, xlab = "Daily sum of steps", type = c ("count"))
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-2-1.png) 
+![plot of chunk unnamed-chunk-2](figure/unnamed-chunk-2-1.png) 
 
-```r
-mean (sum.steps$x)
-```
-
-```
-## [1] 10766.19
-```
+The mean and median of the total number of steps taken per day:
 
 ```r
-sd (sum.steps$x)
+c (mean (sum.steps$x), median (sum.steps$x))
 ```
 
 ```
-## [1] 4269.18
+## [1] 10766.19 10765.00
 ```
+The meand and the median are very close--the distribution is symmetric.
 
 ## What is the average daily activity pattern?
+The plot shows the average number of steps taken for each interval.
 
 ```r
 steps.by.interval <- aggregate (complete.activity$steps, by = list (complete.activity$interval), 
                                 FUN = mean)
-with (steps.by.interval, plot (Group.1, x, type = "l", xlab = "Interval", 
-                               ylab = "Average number of steps"))
+xyplot (x ~ Group.1, data = steps.by.interval, type = "l", 
+        xlab = "Interval", ylab = "Average number of steps")
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-3-1.png) 
+![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4-1.png) 
 
-Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+Which 5-minute interval, on average, contains the maximum number of steps?
 
 ```r
 most.steps <- which.max (steps.by.interval$x)
-busy.interval <- steps.by.interval[most.steps, 1]
-busy.interval
+busiest.interval <- steps.by.interval[most.steps, 1]
+busiest.interval
 ```
 
 ```
@@ -59,7 +67,7 @@ busy.interval
 ```
 
 ## Imputing missing values
-Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs).
+The total number of missing values in the dataset:
 
 ```r
 dim (activity)[1] - dim (complete.activity)[1]
@@ -69,7 +77,7 @@ dim (activity)[1] - dim (complete.activity)[1]
 ## [1] 2304
 ```
 
-Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+Replace a missing number of steps by the average number of steps for this interval. (_NB_: Using the average value for the day would not work, as there are no valid records for the first day of observations.)
 
 
 ```r
@@ -78,53 +86,53 @@ clean.activity <- merge (activity, mean.steps, by.x = "interval", by.y = "Group.
 clean.activity$steps[is.na (clean.activity$steps)] <- clean.activity$x[is.na (clean.activity$steps)]
 ```
 
-Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+The plot shows a histogram of the total number of steps taken each day for the dataset with the imputed data.
 
 
 ```r
 clean.sum.steps <- aggregate (clean.activity$steps, by = list (clean.activity$date), FUN = sum)[2]
-hist (clean.sum.steps$x, xlab = "Daily sum of steps", main = "Total number of steps taken each day")
+histogram (clean.sum.steps$x, xlab = "Daily sum of steps", type = c ("count"))
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-7-1.png) 
+![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-8-1.png) 
 
-```r
-mean (clean.sum.steps$x)
-```
-
-```
-## [1] 10766.19
-```
+The mean and median of the total number of steps taken per day, with and without missing data:
 
 ```r
-sd (clean.sum.steps$x)
+rbind (c (mean (sum.steps$x), median (sum.steps$x)),
+  c (mean (clean.sum.steps$x), median (clean.sum.steps$x)))
 ```
 
 ```
-## [1] 3974.391
+##          [,1]     [,2]
+## [1,] 10766.19 10765.00
+## [2,] 10766.19 10766.19
 ```
+
+The mean values did not change, which is explained by the fact that the missing values were replaced by the mean values by the interval. The median increased insignificantly.
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
-Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+I created a new factor variable with two levels – “weekday” and “weekend.”
 
 
 ```r
-clean.activity$weekend <- (weekdays (clean.activity$date) == "Sunday" | weekdays (clean.activity$date) == "Saturday")
-clean.activity$weekend.factor[clean.activity$weekend] <- "weekend"                   
-clean.activity$weekend.factor[!clean.activity$weekend] <- "weekday"
-clean.activity$weekend.factor = as.factor (clean.activity$weekend.factor)
+clean.activity$weekend <- ifelse (weekdays (clean.activity$date) %in% c ("Saturday","Sunday"), 
+                                  "weekend",  "weekday")
+clean.activity$weekend = as.factor (clean.activity$weekend)
 ```
 
-Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). 
+The panel plot shows the number of steps taken for each interval, averaged across all weekday days or weekend days:
 
 
 ```r
-library (ggplot2)
-clean.steps.by.interval <- aggregate (clean.activity$steps, by = list (clean.activity$interval,clean.activity$weekend.factor), 
+clean.steps.by.interval <- aggregate (clean.activity$steps, 
+                                      by = list (clean.activity$interval, clean.activity$weekend), 
                                 FUN = mean)
-qplot (Group.1, x, data = clean.steps.by.interval, facets = Group.2 ~ ., geom = "line",
+xyplot (x ~ Group.1 | Group.2, data = clean.steps.by.interval, type="l",
        xlab = "Interval", ylab = "Average number of steps")
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-9-1.png) 
+![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-1.png) 
+
+The weekend activity is more heterogeneous (more evenly spread across the intervals). The weekday activity is disproportionately concentrated around the 800th interval.
